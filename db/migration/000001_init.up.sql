@@ -15,6 +15,6 @@ CREATE TABLE tasks (
        retry_backoff INT NOT NULL DEFAULT 30,
        timeout_seconds INT NOT NULL DEFAULT 60,
        updated_at TIMESTAMPTZ NOT NULL DEFAULT (now()),
-       next_run_at TIMESTAMPTZ NOT NULL DEFAULT (now())
+       next_run_at TIMESTAMPTZ NOT NULL
 );
 CREATE INDEX next_run ON tasks (next_run_at);
