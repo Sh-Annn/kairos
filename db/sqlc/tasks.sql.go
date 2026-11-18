@@ -149,3 +149,39 @@ func (q *Queries) UpdateTaskNextRun(ctx context.Context, arg UpdateTaskNextRunPa
 	)
 	return i, err
 }
+
+const updateTaskStatus = `-- name: UpdateTaskStatus :one
+UPDATE tasks
+SET
+    status = $2
+WHERE
+    id = $1
+RETURNING id, task_type, handler_config, schedule_type, cron_expr, interval_seconds, status, created_at, timezone, max_retry, retry_backoff, timeout_seconds, updated_at, next_run_at
+`
+
+type UpdateTaskStatusParams struct {
+	ID     int64      `json:"id"`
+	Status TaskStatus `json:"status"`
+}
+
+func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) (Task, error) {
+	row := q.db.QueryRowContext(ctx, updateTaskStatus, arg.ID, arg.Status)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.TaskType,
+		&i.HandlerConfig,
+		&i.ScheduleType,
+		&i.CronExpr,
+		&i.IntervalSeconds,
+		&i.Status,
+		&i.CreatedAt,
+		&i.Timezone,
+		&i.MaxRetry,
+		&i.RetryBackoff,
+		&i.TimeoutSeconds,
+		&i.UpdatedAt,
+		&i.NextRunAt,
+	)
+	return i, err
+}

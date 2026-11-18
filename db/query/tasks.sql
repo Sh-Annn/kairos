@@ -16,6 +16,14 @@ WHERE
     id = $1
 RETURNING *;
 
+-- name: UpdateTaskStatus :one
+UPDATE tasks
+SET
+    status = $2
+WHERE
+    id = $1
+RETURNING *;
+
 -- name: ListDueTasks :many
 SELECT * FROM tasks
 WHERE status = 'active' AND next_run_at <= now()
