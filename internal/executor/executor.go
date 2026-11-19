@@ -3,25 +3,21 @@ package executor
 import (
 	"context"
 	"net/http"
-	"time"
 
-	"github.com/Sh-Annn/kairos/util"
+	"github.com/Sh-Annn/kairos/internal/domain"
 )
 
 type Executor interface {
-	Exec(ctx context.Context) error
+	Exec(ctx context.Context, handlerConfig domain.HandlerConfig) ([]byte, error)
 }
 
-type HttpExecutor struct {
-	HandlerConfig util.HandlerConfig
-	client        *http.Client
+type HTTPExecutor struct {
+	//	HandlerConfig util.HandlerConfig
+	client *http.Client
 }
 
-func NewHttpExecutor(handlerConfig util.HandlerConfig, timeout time.Duration) *HttpExecutor {
-	return &HttpExecutor{
-		HandlerConfig: handlerConfig,
-		client: &http.Client{
-			Timeout: timeout,
-		},
+func NewHTTPExecutor() *HTTPExecutor {
+	return &HTTPExecutor{
+		client: &http.Client{},
 	}
 }

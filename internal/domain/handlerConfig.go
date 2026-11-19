@@ -1,4 +1,4 @@
-package util
+package domain
 
 import (
 	"encoding/json"
@@ -12,6 +12,8 @@ const (
 	MethodPut    HTTPMethod = "PUT"
 	MethodDelete HTTPMethod = "DELETE"
 )
+
+// TODO: define HTTP Error
 
 func (m HTTPMethod) Valid() bool {
 	switch m {

@@ -2,41 +2,43 @@ package executor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
+
+	"github.com/Sh-Annn/kairos/internal/domain"
 )
 
-func (h *HttpExecutor) Exec(ctx context.Context) error {
-	if !h.HandlerConfig.Method.Valid() {
-		return fmt.Errorf("HTTP Method is not supported.")
+func (h *HTTPExecutor) Exec(ctx context.Context, handlerConfig domain.HandlerConfig) ([]byte, error) {
+	// TODO: diffrent error
+
+	if !handlerConfig.Method.Valid() {
+		return nil, errors.New("HTTP Method is not supported.")
 	}
 
-	req, err := http.NewRequestWithContext(ctx, string(h.HandlerConfig.Method), h.HandlerConfig.URL, nil)
+	if handlerConfig.URL == "" {
+		return nil, errors.New("HTTP URL is null")
+	}
+
+	req, err := http.NewRequestWithContext(ctx, string(handlerConfig.Method), handlerConfig.URL, nil)
 	if err != nil {
-		log.Println(fmt.Errorf("cannot create request: %w", err))
-		return err
+		return nil, fmt.Errorf("cannot create request: %w", err)
 	}
 
 	resp, err := h.client.Do(req)
 	if err != nil {
-		log.Println(err)
-		return err
+		return nil, fmt.Errorf("client cannot call http: %w", err)
 	}
 	defer resp.Body.Close()
 
-	log.Println(resp.StatusCode)
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("bad http statusCode")
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("bad http statusCode: %d", resp.StatusCode)
 	}
-	log.Println(resp.Header)
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	if err != nil {
-		log.Println(err)
-		return err
+		return nil, fmt.Errorf("cannot read from response body: %w", err)
 	}
-	log.Println(string(body))
-	return nil
+	return body, nil
 }

@@ -2,44 +2,49 @@ package scheduler
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"time"
 
 	db "github.com/Sh-Annn/kairos/db/sqlc"
+	"github.com/Sh-Annn/kairos/internal/domain"
 	"github.com/Sh-Annn/kairos/internal/executor"
-	"github.com/Sh-Annn/kairos/util"
 )
 
 type Scheduler struct {
-	Queries  *db.Queries
-	Ticker   time.Ticker
-	Executor executor.Executor
+	queries  db.Querier
+	executor executor.Executor
+	interval time.Duration
 }
 
-func NewScheduler(database *sql.DB, ticker time.Ticker) *Scheduler {
+func NewScheduler(database db.Querier, executor executor.Executor, interval time.Duration) *Scheduler {
 	return &Scheduler{
-		Queries: db.New(database),
-		Ticker:  ticker,
+		queries:  database,
+		executor: executor,
+		interval: interval,
 	}
 }
 
-func (s *Scheduler) Run() {
+func (s *Scheduler) Run(ctx context.Context) error {
 	s.CreateNewTask() // for check later operate, always migratedown before go run
-	for {
-		s.Check()
 
-		<-s.Ticker.C
+	ticker := time.NewTicker(s.interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			s.Check(ctx)
+		}
 	}
 }
 
-func (s *Scheduler) Check() {
-	ctx, cannel := context.WithTimeout(context.Background(), time.Duration(5*time.Second))
-	defer cannel()
-	queryTasks, err := s.Queries.ListDueTasks(ctx, 10)
+func (s *Scheduler) Check(ctx context.Context) {
+	// ctx, cannel := context.WithTimeout(context.Background(), time.Duration(5*time.Second))
+	// defer cannel()
+	queryTasks, err := s.queries.ListDueTasks(ctx, 10)
 	if err != nil {
 		log.Println(fmt.Errorf("failed to query tasks, %w", err))
 	}
@@ -52,57 +57,63 @@ func (s *Scheduler) Check() {
 	log.Println("*************************************************")
 	for _, task := range queryTasks {
 		log.Printf("task_id: %d, next_run_at: %v\n", task.ID, task.NextRunAt)
-		var handlerConfig util.HandlerConfig
-		err := json.Unmarshal(task.HandlerConfig, &handlerConfig)
+
+		err := s.execTask(ctx, &task)
 		if err != nil {
-			log.Println(fmt.Errorf("cannot unmarshal json URL and Method: %w\n", err))
-			continue
+			log.Println(err)
 		}
-
-		// TODO: valid HandlerConfig
-		if handlerConfig.URL == "" {
-			_, err := s.Queries.UpdateTaskStatus(ctx, db.UpdateTaskStatusParams{
-				ID:     task.ID,
-				Status: "deleted",
-			})
-			if err != nil {
-				log.Println(fmt.Errorf("cannot change task status: %w", err))
-				continue
-			}
-			log.Println("task's url is not avilable, changed task staus")
-			continue
-		}
-		log.Println(handlerConfig.Method, handlerConfig.URL)
-
-		ctx, Cannel := context.WithTimeout(context.Background(), time.Duration(task.TimeoutSeconds)*time.Second)
-		defer Cannel()
-
-		s.execTask(ctx, &task, handlerConfig)
 	}
 	log.Println("*************************************************")
 }
 
-func (s *Scheduler) execTask(ctx context.Context, task *db.Task, handlerConfig util.HandlerConfig) {
-	if handlerConfig.Method != http.MethodGet {
-		return
+func (s *Scheduler) execTask(ctx context.Context, task *db.Task) error {
+	// bad Config
+	var handlerConfig domain.HandlerConfig
+	err := json.Unmarshal(task.HandlerConfig, &handlerConfig)
+	if err != nil {
+		return s.markInvalid(ctx, task)
 	}
 
-	s.Executor = executor.NewHttpExecutor(handlerConfig, time.Duration(task.TimeoutSeconds))
-	err := s.Executor.Exec(ctx)
-	if err != nil {
-		log.Println(fmt.Errorf("cannot exec http: %w", err))
-		return
+	// Call HTTP
+	execCtx, execCannel := context.WithTimeout(ctx, time.Duration(task.IntervalSeconds.Int32)*time.Second)
+	body, execErr := s.executor.Exec(execCtx, handlerConfig)
+	execCannel()
+
+	if execErr != nil {
+		return s.HandleFailure(ctx, task, execErr)
+	}
+	log.Println(body)
+	return s.HandleSuccess(ctx, task)
+
+	// TODO: abstract a function
+	// updateTask, err := s.queries.UpdateTaskNextRun(ctx, db.UpdateTaskNextRunParams{
+	// 	ID:        task.ID,
+	// 	NextRunAt: time.Now().Add(time.Duration(task.TimeoutSeconds) * time.Second),
+	// })
+	// if err != nil {
+	// 	return fmt.Errorf("cannot change next_run_at %w", err)
+	// }
+	// log.Printf("success change next_run_at, task_id: %d, next_run_at: %v", updateTask.ID, updateTask.NextRunAt)
+	// return nil
+}
+
+func (s *Scheduler) updateTask(ctx context.Context, task *db.Task) error {
+	var err error
+	switch task.ScheduleType {
+	case db.ScheduleTypeOnce:
+		_, err = s.queries.UpdateTaskStatus(ctx, db.UpdateTaskStatusParams{
+			ID:     task.ID,
+			Status: "deleted",
+		})
+		if err != nil {
+			return fmt.Errorf("cannot change task status: %w", err)
+		}
+		// TODO: diffrent SchedultType
+		// case db.ScheduleTypeInterval:
+		// case db.ScheduleTypeCron:
 	}
 
-	updateTask, err := s.Queries.UpdateTaskNextRun(ctx, db.UpdateTaskNextRunParams{
-		ID:        task.ID,
-		NextRunAt: time.Now().Add(10 * time.Minute),
-	})
-	if err != nil {
-		log.Println(fmt.Errorf("cannot change next_run_at %w", err))
-		return
-	}
-	log.Printf("success change next_run_at, task_id: %d, next_run_at: %v", updateTask.ID, updateTask.NextRunAt)
+	return nil
 }
 
 func (s *Scheduler) CreateNewTask() {
@@ -110,15 +121,15 @@ func (s *Scheduler) CreateNewTask() {
 	ctx, Cannel := context.WithTimeout(context.Background(), time.Duration(5*time.Second))
 	defer Cannel()
 
-	handlerConfig := util.HandlerConfig{
-		URL:    "",
+	handlerConfig := domain.HandlerConfig{
+		URL:    "https://httpbin.org/get",
 		Method: "GET",
 	}
 	data, err := json.Marshal(handlerConfig)
 	if err != nil {
 		panic(err)
 	}
-	task, err := s.Queries.CreateTask(ctx, db.CreateTaskParams{
+	task, err := s.queries.CreateTask(ctx, db.CreateTaskParams{
 		TaskType:      "http",
 		HandlerConfig: json.RawMessage(data),
 

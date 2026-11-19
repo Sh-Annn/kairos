@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"database/sql"
-
-	"log"
 	"time"
 
+	"log"
+
+	"github.com/Sh-Annn/kairos/db/sqlc"
+	"github.com/Sh-Annn/kairos/internal/executor"
 	"github.com/Sh-Annn/kairos/internal/scheduler"
 
 	_ "github.com/lib/pq"
@@ -27,8 +29,12 @@ func main() {
 	log.Println("connect kairos database")
 
 	// conn is *sql.DB, func New will return a *db.Queries for sql query
-	ticker := time.NewTicker(2 * time.Second)
-	scheduler := scheduler.NewScheduler(conn, *ticker)
 
-	scheduler.Run()
+	e := executor.NewHTTPExecutor()
+
+	s := scheduler.NewScheduler(db.New(conn), e, 2*time.Second)
+
+	if err := s.Run(context.Background()); err != nil {
+		log.Println(err)
+	}
 }
