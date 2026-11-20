@@ -24,6 +24,24 @@ func (m HTTPMethod) Valid() bool {
 	}
 }
 
+type HTTPError string
+
+const (
+	URLError    HTTPError = "HTTP URL is unavailable"
+	MethodError HTTPError = "HTTP Method is not supported"
+)
+
+// TODO: define HTTP Error
+
+func (m HTTPError) Valid() bool {
+	switch m {
+	case URLError, MethodError:
+		return true
+	default:
+		return false
+	}
+}
+
 type HandlerConfig struct {
 	URL    string          `json:"url"`
 	Method HTTPMethod      `json:"method"`
