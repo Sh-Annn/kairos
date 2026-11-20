@@ -58,9 +58,10 @@ func (ns NullScheduleType) Value() (driver.Value, error) {
 type TaskStatus string
 
 const (
-	TaskStatusActive  TaskStatus = "active"
-	TaskStatusPaused  TaskStatus = "paused"
-	TaskStatusDeleted TaskStatus = "deleted"
+	TaskStatusActive    TaskStatus = "active"
+	TaskStatusPaused    TaskStatus = "paused"
+	TaskStatusDeleted   TaskStatus = "deleted"
+	TaskStatusCompleted TaskStatus = "completed"
 )
 
 func (e *TaskStatus) Scan(src interface{}) error {
@@ -98,9 +99,50 @@ func (ns NullTaskStatus) Value() (driver.Value, error) {
 	return string(ns.TaskStatus), nil
 }
 
+type TaskType string
+
+const (
+	TaskTypeHttp TaskType = "http"
+)
+
+func (e *TaskType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TaskType(s)
+	case string:
+		*e = TaskType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TaskType: %T", src)
+	}
+	return nil
+}
+
+type NullTaskType struct {
+	TaskType TaskType `json:"task_type"`
+	Valid    bool     `json:"valid"` // Valid is true if TaskType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTaskType) Scan(value interface{}) error {
+	if value == nil {
+		ns.TaskType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TaskType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTaskType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TaskType), nil
+}
+
 type Task struct {
 	ID              int64           `json:"id"`
-	TaskType        string          `json:"task_type"`
+	TaskType        TaskType        `json:"task_type"`
 	HandlerConfig   json.RawMessage `json:"handler_config"`
 	ScheduleType    ScheduleType    `json:"schedule_type"`
 	CronExpr        sql.NullString  `json:"cron_expr"`

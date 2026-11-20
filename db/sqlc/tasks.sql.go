@@ -24,7 +24,7 @@ RETURNING id, task_type, handler_config, schedule_type, cron_expr, interval_seco
 `
 
 type CreateTaskParams struct {
-	TaskType        string          `json:"task_type"`
+	TaskType        TaskType        `json:"task_type"`
 	HandlerConfig   json.RawMessage `json:"handler_config"`
 	ScheduleType    ScheduleType    `json:"schedule_type"`
 	CronExpr        sql.NullString  `json:"cron_expr"`
