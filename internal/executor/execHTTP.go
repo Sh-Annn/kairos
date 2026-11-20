@@ -2,7 +2,6 @@ package executor
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,11 +13,11 @@ func (h *HTTPExecutor) Exec(ctx context.Context, handlerConfig domain.HandlerCon
 	// TODO: diffrent error
 
 	if !handlerConfig.Method.Valid() {
-		return nil, errors.New("HTTP Method is not supported.")
+		return nil, fmt.Errorf(string(domain.MethodError))
 	}
 
 	if handlerConfig.URL == "" {
-		return nil, errors.New("HTTP URL is null")
+		return nil, fmt.Errorf(string(domain.URLError))
 	}
 
 	req, err := http.NewRequestWithContext(ctx, string(handlerConfig.Method), handlerConfig.URL, nil)

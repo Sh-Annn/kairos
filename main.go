@@ -37,4 +37,6 @@ func main() {
 	if err := s.Run(context.Background()); err != nil {
 		log.Println(err)
 	}
+
+	log.Println("no task need run")
 }
