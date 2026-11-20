@@ -11,8 +11,7 @@ import (
 type Querier interface {
 	CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error)
 	ListDueTasks(ctx context.Context, limit int32) ([]Task, error)
-	UpdateTaskNextRun(ctx context.Context, arg UpdateTaskNextRunParams) (Task, error)
-	UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) (Task, error)
+	UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error)
 }
 
 var _ Querier = (*Queries)(nil)

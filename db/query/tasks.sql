@@ -8,20 +8,14 @@ VALUES (
 )
 RETURNING *;
 
--- name: UpdateTaskNextRun :one
+-- name: UpdateTask :one
 UPDATE tasks
 SET
-    next_run_at = $2
+    status = COALESCE(sqlc.narg(status), status),
+    updated_at = COALESCE(sqlc.arg(updated_at), updated_at),
+    next_run_at = COALESCE(sqlc.arg(next_run_at), next_run_at)
 WHERE
-    id = $1
-RETURNING *;
-
--- name: UpdateTaskStatus :one
-UPDATE tasks
-SET
-    status = $2
-WHERE
-    id = $1
+    id = sqlc.arg(id)
 RETURNING *;
 
 -- name: ListDueTasks :many
