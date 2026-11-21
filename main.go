@@ -25,6 +25,9 @@ func main() {
 		log.Fatal(err)
 	}
 	defer conn.Close()
+	defer func() {
+		log.Println("close kairos database")
+	}()
 
 	log.Println("connect kairos database")
 
@@ -37,6 +40,4 @@ func main() {
 	if err := s.Run(context.Background()); err != nil {
 		log.Println(err)
 	}
-
-	log.Println("no task need run")
 }
