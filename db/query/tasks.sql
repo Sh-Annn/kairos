@@ -12,8 +12,8 @@ RETURNING *;
 UPDATE tasks
 SET
     status = COALESCE(sqlc.narg(status), status),
-    updated_at = COALESCE(sqlc.arg(updated_at), updated_at),
-    next_run_at = COALESCE(sqlc.arg(next_run_at), next_run_at)
+    updated_at = COALESCE(sqlc.narg(updated_at), updated_at),
+    next_run_at = COALESCE(sqlc.narg(next_run_at), next_run_at)
 WHERE
     id = sqlc.arg(id)
 RETURNING *;

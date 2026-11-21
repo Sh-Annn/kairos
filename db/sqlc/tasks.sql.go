@@ -127,8 +127,8 @@ RETURNING id, task_type, handler_config, schedule_type, cron_expr, interval_seco
 
 type UpdateTaskParams struct {
 	Status    NullTaskStatus `json:"status"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	NextRunAt time.Time      `json:"next_run_at"`
+	UpdatedAt sql.NullTime   `json:"updated_at"`
+	NextRunAt sql.NullTime   `json:"next_run_at"`
 	ID        int64          `json:"id"`
 }
 
