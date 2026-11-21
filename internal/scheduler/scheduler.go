@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -31,30 +32,32 @@ func (s *Scheduler) Run(ctx context.Context) error {
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
 
-	//	CreateNewTask(ctx, s.queries)
+	CreateNewTask(ctx, s.queries)
 
+	var err error
 	for {
-		s.Check(ctx)
-		// select {
-		// case <-ctx.Done():
-		// 	return nil
-		// case <-ticker.C:
-		// 	continue
-		// }
-		<-ticker.C
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			err = s.Check(ctx)
+			if err != nil {
+				return err
+			}
+		}
 	}
 }
 
 // List Tasks from database, and run them
-func (s *Scheduler) Check(ctx context.Context) {
+func (s *Scheduler) Check(ctx context.Context) error {
 	queryTasks, err := s.queries.ListDueTasks(ctx, 10)
 	if err != nil {
 		log.Println(fmt.Errorf("failed to query tasks, %w", err))
 	}
 
 	if len(queryTasks) <= 0 {
-		log.Println("no task need run")
-		return
+		log.Println("no tasks needs run for now, continue check...")
+		return nil
 	}
 
 	log.Println("*************************************************")
@@ -67,6 +70,7 @@ func (s *Scheduler) Check(ctx context.Context) {
 		}
 	}
 	log.Println("*************************************************")
+	return nil
 }
 
 // execute each task
@@ -79,9 +83,9 @@ func (s *Scheduler) execTask(ctx context.Context, task *db.Task) error {
 	}
 
 	// Call HTTP
-	// execCtx, execCannel := context.WithTimeout(ctx, time.Duration(task.IntervalSeconds.Int32)*time.Second)
-	body, execErr := s.executor.Exec(ctx, handlerConfig)
-	// execCannel()
+	execCtx, execCannel := context.WithTimeout(ctx, time.Duration(task.TimeoutSeconds)*time.Second)
+	body, execErr := s.executor.Exec(execCtx, handlerConfig)
+	execCannel()
 
 	if execErr != nil {
 		return s.HandleFailure(ctx, task, domain.HTTPError(execErr.Error()))
@@ -107,7 +111,11 @@ func CreateNewTask(ctx context.Context, queries db.Querier) {
 		TaskType:      "http",
 		HandlerConfig: json.RawMessage(data),
 
-		ScheduleType:   "once",
+		ScheduleType: "interval",
+		IntervalSeconds: sql.NullInt32{
+			Int32: 60,
+			Valid: true,
+		},
 		Timezone:       "Asia/Shanghai",
 		MaxRetry:       3,
 		RetryBackoff:   30,

@@ -2,8 +2,9 @@ package scheduler
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
-	//	"log"
+
 	"time"
 
 	db "github.com/Sh-Annn/kairos/db/sqlc"
@@ -16,7 +17,10 @@ func (s *Scheduler) HandleSuccess(ctx context.Context, task *db.Task) error {
 	// schedult_type: once, interval, cron
 	var updateTaskParams db.UpdateTaskParams
 	updateTaskParams.ID = task.ID
-	updateTaskParams.UpdatedAt = time.Now()
+	updateTaskParams.UpdatedAt = sql.NullTime{
+		Time:  time.Now(),
+		Valid: true,
+	}
 
 	switch task.ScheduleType {
 	case db.ScheduleTypeOnce:
@@ -24,7 +28,11 @@ func (s *Scheduler) HandleSuccess(ctx context.Context, task *db.Task) error {
 			TaskStatus: "completed",
 			Valid:      true,
 		}
-		// case db.ScheduleTypeInterval:
+	case db.ScheduleTypeInterval:
+		updateTaskParams.NextRunAt = sql.NullTime{
+			Time:  time.Now().Add(time.Duration(task.IntervalSeconds.Int32) * time.Second),
+			Valid: true,
+		}
 		// case db.ScheduleTypeCron:
 	}
 	_, err := s.queries.UpdateTask(ctx, updateTaskParams)
@@ -40,13 +48,19 @@ func (s *Scheduler) HandleFailure(ctx context.Context, task *db.Task, execErr do
 	// Error: URL, Method, StatusCode, Timeout
 	var updateTaskParams db.UpdateTaskParams
 	updateTaskParams.ID = task.ID
-	updateTaskParams.UpdatedAt = time.Now()
-	updateTaskParams.NextRunAt = time.Now().Add(time.Duration(task.RetryBackoff) * time.Second)
+	updateTaskParams.UpdatedAt = sql.NullTime{
+		Time:  time.Now(),
+		Valid: true,
+	}
+	updateTaskParams.NextRunAt = sql.NullTime{
+		Time:  time.Now().Add(time.Duration(task.RetryBackoff) * time.Second),
+		Valid: true,
+	}
 
 	switch execErr {
 	case domain.URLError, domain.MethodError:
 		updateTaskParams.Status = db.NullTaskStatus{
-			TaskStatus: "deleted",
+			TaskStatus: "paused",
 			Valid:      true,
 		}
 
@@ -67,10 +81,13 @@ func (s *Scheduler) markInvalid(ctx context.Context, task *db.Task) error {
 	_, err := s.queries.UpdateTask(ctx, db.UpdateTaskParams{
 		ID: task.ID,
 		Status: db.NullTaskStatus{
-			TaskStatus: "deleted",
+			TaskStatus: "paused",
 			Valid:      true,
 		},
-		UpdatedAt: time.Now(),
+		UpdatedAt: sql.NullTime{
+			Time:  time.Now(),
+			Valid: true,
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("cannot change task's status be deleted: %w", err)
