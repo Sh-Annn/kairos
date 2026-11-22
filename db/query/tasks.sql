@@ -12,6 +12,7 @@ RETURNING *;
 UPDATE tasks
 SET
     status = COALESCE(sqlc.narg(status), status),
+    retry_count = COALESCE(sqlc.narg(retry_count), retry_count),
     updated_at = COALESCE(sqlc.narg(updated_at), updated_at),
     next_run_at = COALESCE(sqlc.narg(next_run_at), next_run_at)
 WHERE

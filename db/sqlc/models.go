@@ -150,6 +150,7 @@ type Task struct {
 	Status          TaskStatus      `json:"status"`
 	CreatedAt       time.Time       `json:"created_at"`
 	Timezone        string          `json:"timezone"`
+	RetryCount      int32           `json:"retry_count"`
 	MaxRetry        int32           `json:"max_retry"`
 	RetryBackoff    int32           `json:"retry_backoff"`
 	TimeoutSeconds  int32           `json:"timeout_seconds"`

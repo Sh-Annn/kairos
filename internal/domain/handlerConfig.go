@@ -24,18 +24,24 @@ func (m HTTPMethod) Valid() bool {
 	}
 }
 
-type HTTPError string
+type HTTPError int
 
 const (
-	URLError    HTTPError = "HTTP URL is unavailable"
-	MethodError HTTPError = "HTTP Method is not supported"
+	URLError HTTPError = iota
+	MethodError
+	ConfigError
+	NewRequestError
+	HTTPClientError
+	StatusCodeError
+	BodyError
+
+	HTTPOK
 )
 
-// TODO: define HTTP Error
-
-func (m HTTPError) Valid() bool {
-	switch m {
-	case URLError, MethodError:
+func (e HTTPError) Valid() bool {
+	switch e {
+	case URLError, MethodError, ConfigError, HTTPClientError,
+		NewRequestError, StatusCodeError, BodyError:
 		return true
 	default:
 		return false

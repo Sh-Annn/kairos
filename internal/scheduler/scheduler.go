@@ -60,6 +60,9 @@ func (s *Scheduler) Check(ctx context.Context) error {
 		return nil
 	}
 
+	// Who manage the number of retry? Praboly the function execTask,
+	// all function call returns them error, then execTask actually
+	// clean up.
 	log.Println("*************************************************")
 	for _, task := range queryTasks {
 		log.Printf("task_id: %d, next_run_at: %v\n", task.ID, task.NextRunAt)
@@ -75,20 +78,13 @@ func (s *Scheduler) Check(ctx context.Context) error {
 
 // execute each task
 func (s *Scheduler) execTask(ctx context.Context, task *db.Task) error {
-	// bad Config
-	var handlerConfig domain.HandlerConfig
-	err := json.Unmarshal(task.HandlerConfig, &handlerConfig)
-	if err != nil {
-		return s.markInvalid(ctx, task)
-	}
-
 	// Call HTTP
 	execCtx, execCannel := context.WithTimeout(ctx, time.Duration(task.TimeoutSeconds)*time.Second)
-	body, execErr := s.executor.Exec(execCtx, handlerConfig)
+	body, execErr := s.executor.Exec(execCtx, task.HandlerConfig)
 	execCannel()
 
 	if execErr != nil {
-		return s.HandleFailure(ctx, task, domain.HTTPError(execErr.Error()))
+		return s.HandleFailure(ctx, task, execErr)
 	}
 	log.Println(string(body))
 	return s.HandleSuccess(ctx, task)
@@ -100,7 +96,7 @@ func CreateNewTask(ctx context.Context, queries db.Querier) {
 	defer Cannel()
 
 	handlerConfig := domain.HandlerConfig{
-		URL:    "https://httpbin.org/get",
+		URL:    "https://funck",
 		Method: "GET",
 	}
 	data, err := json.Marshal(handlerConfig)
@@ -118,7 +114,7 @@ func CreateNewTask(ctx context.Context, queries db.Querier) {
 		},
 		Timezone:       "Asia/Shanghai",
 		MaxRetry:       3,
-		RetryBackoff:   30,
+		RetryBackoff:   3,
 		TimeoutSeconds: 30,
 		NextRunAt:      time.Now().Add(time.Duration(2 * time.Second)),
 	})

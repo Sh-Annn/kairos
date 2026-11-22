@@ -18,6 +18,7 @@ CREATE TABLE tasks (
        status task_status NOT NULL DEFAULT 'active',
        created_at TIMESTAMPTZ NOT NULL DEFAULT (now()),
        timezone TEXT NOT NULL DEFAULT 'UTC',
+       retry_count INT NOT NULL DEFAULT 0,
        max_retry INT NOT NULL DEFAULT 3,
        retry_backoff INT NOT NULL DEFAULT 30,
        timeout_seconds INT NOT NULL DEFAULT 60,

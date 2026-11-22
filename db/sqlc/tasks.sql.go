@@ -20,7 +20,7 @@ INSERT INTO tasks (
 VALUES (
        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 )
-RETURNING id, task_type, handler_config, schedule_type, cron_expr, interval_seconds, status, created_at, timezone, max_retry, retry_backoff, timeout_seconds, updated_at, next_run_at
+RETURNING id, task_type, handler_config, schedule_type, cron_expr, interval_seconds, status, created_at, timezone, retry_count, max_retry, retry_backoff, timeout_seconds, updated_at, next_run_at
 `
 
 type CreateTaskParams struct {
@@ -60,6 +60,7 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 		&i.Status,
 		&i.CreatedAt,
 		&i.Timezone,
+		&i.RetryCount,
 		&i.MaxRetry,
 		&i.RetryBackoff,
 		&i.TimeoutSeconds,
@@ -70,7 +71,7 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 }
 
 const listDueTasks = `-- name: ListDueTasks :many
-SELECT id, task_type, handler_config, schedule_type, cron_expr, interval_seconds, status, created_at, timezone, max_retry, retry_backoff, timeout_seconds, updated_at, next_run_at FROM tasks
+SELECT id, task_type, handler_config, schedule_type, cron_expr, interval_seconds, status, created_at, timezone, retry_count, max_retry, retry_backoff, timeout_seconds, updated_at, next_run_at FROM tasks
 WHERE status = 'active' AND next_run_at <= now()
 ORDER BY next_run_at
 LIMIT $1
@@ -95,6 +96,7 @@ func (q *Queries) ListDueTasks(ctx context.Context, limit int32) ([]Task, error)
 			&i.Status,
 			&i.CreatedAt,
 			&i.Timezone,
+			&i.RetryCount,
 			&i.MaxRetry,
 			&i.RetryBackoff,
 			&i.TimeoutSeconds,
@@ -118,23 +120,26 @@ const updateTask = `-- name: UpdateTask :one
 UPDATE tasks
 SET
     status = COALESCE($1, status),
-    updated_at = COALESCE($2, updated_at),
-    next_run_at = COALESCE($3, next_run_at)
+    retry_count = COALESCE($2, retry_count),
+    updated_at = COALESCE($3, updated_at),
+    next_run_at = COALESCE($4, next_run_at)
 WHERE
-    id = $4
-RETURNING id, task_type, handler_config, schedule_type, cron_expr, interval_seconds, status, created_at, timezone, max_retry, retry_backoff, timeout_seconds, updated_at, next_run_at
+    id = $5
+RETURNING id, task_type, handler_config, schedule_type, cron_expr, interval_seconds, status, created_at, timezone, retry_count, max_retry, retry_backoff, timeout_seconds, updated_at, next_run_at
 `
 
 type UpdateTaskParams struct {
-	Status    NullTaskStatus `json:"status"`
-	UpdatedAt sql.NullTime   `json:"updated_at"`
-	NextRunAt sql.NullTime   `json:"next_run_at"`
-	ID        int64          `json:"id"`
+	Status     NullTaskStatus `json:"status"`
+	RetryCount sql.NullInt32  `json:"retry_count"`
+	UpdatedAt  sql.NullTime   `json:"updated_at"`
+	NextRunAt  sql.NullTime   `json:"next_run_at"`
+	ID         int64          `json:"id"`
 }
 
 func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error) {
 	row := q.db.QueryRowContext(ctx, updateTask,
 		arg.Status,
+		arg.RetryCount,
 		arg.UpdatedAt,
 		arg.NextRunAt,
 		arg.ID,
@@ -150,6 +155,7 @@ func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, e
 		&i.Status,
 		&i.CreatedAt,
 		&i.Timezone,
+		&i.RetryCount,
 		&i.MaxRetry,
 		&i.RetryBackoff,
 		&i.TimeoutSeconds,

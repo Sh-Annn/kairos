@@ -2,13 +2,16 @@ package executor
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
-
-	"github.com/Sh-Annn/kairos/internal/domain"
 )
 
 type Executor interface {
-	Exec(ctx context.Context, handlerConfig domain.HandlerConfig) ([]byte, error)
+	Exec(ctx context.Context, config json.RawMessage) ([]byte, ExecError)
+}
+
+type ExecError interface {
+	Valid() bool
 }
 
 type HTTPExecutor struct {

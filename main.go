@@ -25,13 +25,11 @@ func main() {
 		log.Fatal(err)
 	}
 	defer conn.Close()
+	log.Println("connect kairos database")
+
 	defer func() {
 		log.Println("close kairos database")
 	}()
-
-	log.Println("connect kairos database")
-
-	// conn is *sql.DB, func New will return a *db.Queries for sql query
 
 	e := executor.NewHTTPExecutor()
 
