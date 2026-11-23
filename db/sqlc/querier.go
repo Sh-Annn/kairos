@@ -10,6 +10,12 @@ import (
 
 type Querier interface {
 	CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error)
+	// INSERT INTO task_runs (
+	//        task_id, run_type, run_status, run_message, begin_time, end_time
+	// ) VALUES (
+	//        $1, $2, $3, $4, $5, $6
+	// ) RETURNING *;
+	CreateTaskRun(ctx context.Context, arg CreateTaskRunParams) (TaskRun, error)
 	ListDueTasks(ctx context.Context, limit int32) ([]Task, error)
 	UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error)
 }

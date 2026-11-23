@@ -157,3 +157,12 @@ type Task struct {
 	UpdatedAt       time.Time       `json:"updated_at"`
 	NextRunAt       time.Time       `json:"next_run_at"`
 }
+
+type TaskRun struct {
+	ID         int64          `json:"id"`
+	TaskID     int64          `json:"task_id"`
+	RunStatus  string         `json:"run_status"`
+	RunMessage sql.NullString `json:"run_message"`
+	BeginTime  time.Time      `json:"begin_time"`
+	EndTime    time.Time      `json:"end_time"`
+}
