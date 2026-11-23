@@ -9,7 +9,7 @@ import (
 	"github.com/Sh-Annn/kairos/internal/domain"
 )
 
-func (h *HTTPExecutor) Exec(ctx context.Context, config json.RawMessage) ([]byte, ExecError) {
+func (h *HTTPExecutor) Exec(ctx context.Context, config json.RawMessage) ([]byte, error) {
 	var handlerConfig domain.HandlerConfig
 	err := json.Unmarshal(config, &handlerConfig)
 	if err != nil {
@@ -44,5 +44,5 @@ func (h *HTTPExecutor) Exec(ctx context.Context, config json.RawMessage) ([]byte
 	if err != nil {
 		return nil, domain.BodyError
 	}
-	return body, domain.HTTPOK
+	return body, nil
 }

@@ -71,6 +71,7 @@ func (s *Scheduler) Check(ctx context.Context) error {
 		if err != nil {
 			log.Println(err)
 		}
+
 	}
 	log.Println("*************************************************")
 	return nil
@@ -78,15 +79,35 @@ func (s *Scheduler) Check(ctx context.Context) error {
 
 // execute each task
 func (s *Scheduler) execTask(ctx context.Context, task *db.Task) error {
+	taskRunsParams := db.CreateTaskRunParams{
+		TaskID:    task.ID,
+		RunStatus: "success",
+		RunMessage: sql.NullString{
+			Valid: false,
+		},
+		BeginTime: time.Now(),
+	}
+
 	// Call HTTP
 	execCtx, execCannel := context.WithTimeout(ctx, time.Duration(task.TimeoutSeconds)*time.Second)
 	body, execErr := s.executor.Exec(execCtx, task.HandlerConfig)
 	execCannel()
 
 	if execErr != nil {
+		taskRunsParams.RunStatus = "fail"
+		taskRunsParams.RunMessage = sql.NullString{
+			String: execErr.Error(),
+			Valid:  true,
+		}
+		taskRunsParams.EndTime = time.Now()
+
+		_, _ = s.queries.CreateTaskRun(ctx, taskRunsParams)
 		return s.HandleFailure(ctx, task, execErr)
 	}
+
 	log.Println(string(body))
+	taskRunsParams.EndTime = time.Now()
+	_, _ = s.queries.CreateTaskRun(ctx, taskRunsParams)
 	return s.HandleSuccess(ctx, task)
 }
 
@@ -96,8 +117,8 @@ func CreateNewTask(ctx context.Context, queries db.Querier) {
 	defer Cannel()
 
 	handlerConfig := domain.HandlerConfig{
-		URL:    "https://funck",
-		Method: "GET",
+		URL:    domain.RandomString(12),
+		Method: domain.RandomMethod(),
 	}
 	data, err := json.Marshal(handlerConfig)
 	if err != nil {
@@ -107,20 +128,28 @@ func CreateNewTask(ctx context.Context, queries db.Querier) {
 		TaskType:      "http",
 		HandlerConfig: json.RawMessage(data),
 
-		ScheduleType: "interval",
+		ScheduleType: "once",
 		IntervalSeconds: sql.NullInt32{
-			Int32: 60,
+			Int32: domain.RandomInt(30, 60),
 			Valid: true,
 		},
 		Timezone:       "Asia/Shanghai",
-		MaxRetry:       3,
-		RetryBackoff:   3,
-		TimeoutSeconds: 30,
-		NextRunAt:      time.Now().Add(time.Duration(2 * time.Second)),
+		MaxRetry:       domain.RandomInt(1, 3),
+		RetryBackoff:   domain.RandomInt(2, 5),
+		TimeoutSeconds: domain.RandomInt(10, 30),
+		NextRunAt:      time.Now().Add(time.Duration(10 * time.Second)),
 	})
 	if err != nil {
 		log.Println(fmt.Errorf("failed to create task: %w", err))
 		return
 	}
 	log.Printf("task: %+v\n", task)
+}
+
+func (s *Scheduler) CreateTaskRun(ctx context.Context, params db.CreateTaskRunParams) error {
+	_, err := s.queries.CreateTaskRun(ctx, params)
+	if err != nil {
+		return err
+	}
+	return nil
 }

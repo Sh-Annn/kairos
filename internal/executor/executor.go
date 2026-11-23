@@ -7,7 +7,7 @@ import (
 )
 
 type Executor interface {
-	Exec(ctx context.Context, config json.RawMessage) ([]byte, ExecError)
+	Exec(ctx context.Context, config json.RawMessage) ([]byte, error)
 }
 
 type ExecError interface {

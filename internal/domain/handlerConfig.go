@@ -24,18 +24,18 @@ func (m HTTPMethod) Valid() bool {
 	}
 }
 
-type HTTPError int
+type HTTPError string
 
 const (
-	URLError HTTPError = iota
-	MethodError
-	ConfigError
-	NewRequestError
-	HTTPClientError
-	StatusCodeError
-	BodyError
+	URLError        HTTPError = "URL Error"
+	MethodError     HTTPError = "HTTP Method Error"
+	ConfigError     HTTPError = "HTTP HandlerConfig Error"
+	NewRequestError HTTPError = "NewRequest Error"
+	HTTPClientError HTTPError = "HTTP Client Error"
+	StatusCodeError HTTPError = "HTTP StatusCode Error"
+	BodyError       HTTPError = "HTTP Response Body Error"
 
-	HTTPOK
+	HTTPOK HTTPError = "OK"
 )
 
 func (e HTTPError) Valid() bool {
@@ -46,6 +46,10 @@ func (e HTTPError) Valid() bool {
 	default:
 		return false
 	}
+}
+
+func (e HTTPError) Error() string {
+	return string(e)
 }
 
 type HandlerConfig struct {

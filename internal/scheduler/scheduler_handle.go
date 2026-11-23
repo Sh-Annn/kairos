@@ -9,7 +9,6 @@ import (
 
 	db "github.com/Sh-Annn/kairos/db/sqlc"
 	"github.com/Sh-Annn/kairos/internal/domain"
-	"github.com/Sh-Annn/kairos/internal/executor"
 )
 
 func (s *Scheduler) HandleSuccess(ctx context.Context, task *db.Task) error {
@@ -34,6 +33,10 @@ func (s *Scheduler) HandleSuccess(ctx context.Context, task *db.Task) error {
 			Time:  time.Now().Add(time.Duration(task.IntervalSeconds.Int32) * time.Second),
 			Valid: true,
 		}
+		updateTaskParams.RetryCount = sql.NullInt32{
+			Int32: 0,
+			Valid: true,
+		}
 		// case db.ScheduleTypeCron:
 	}
 	_, err := s.queries.UpdateTask(ctx, updateTaskParams)
@@ -43,7 +46,7 @@ func (s *Scheduler) HandleSuccess(ctx context.Context, task *db.Task) error {
 	return nil
 }
 
-func (s *Scheduler) HandleFailure(ctx context.Context, task *db.Task, execErr executor.ExecError) error {
+func (s *Scheduler) HandleFailure(ctx context.Context, task *db.Task, execErr error) error {
 	//	log.Println("handleFailure")
 	// change status or next_run_at
 	// Error: URL, Method, StatusCode, Timeout
@@ -82,7 +85,8 @@ func (s *Scheduler) HandleFailure(ctx context.Context, task *db.Task, execErr ex
 	if err != nil {
 		return fmt.Errorf("HTTP Bad Request: %s, Error: %w", execErr, err)
 	}
-	if updateTask.RetryCount >= updateTask.MaxRetry {
+
+	if updateTask.RetryCount > updateTask.MaxRetry {
 		err = s.deleteTask(ctx, &updateTask)
 		if err != nil {
 			return fmt.Errorf("retry_count >= max_retry, but cannot update status")
