@@ -86,7 +86,7 @@ func (s *Scheduler) HandleFailure(ctx context.Context, task *db.Task, execErr er
 		return fmt.Errorf("HTTP Bad Request: %s, Error: %w", execErr, err)
 	}
 
-	if updateTask.RetryCount > updateTask.MaxRetry {
+	if updateTask.RetryCount >= updateTask.MaxRetry {
 		err = s.deleteTask(ctx, &updateTask)
 		if err != nil {
 			return fmt.Errorf("retry_count >= max_retry, but cannot update status")

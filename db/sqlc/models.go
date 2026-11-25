@@ -161,6 +161,7 @@ type Task struct {
 type TaskRun struct {
 	ID         int64          `json:"id"`
 	TaskID     int64          `json:"task_id"`
+	Attempt    int32          `json:"attempt"`
 	RunStatus  string         `json:"run_status"`
 	RunMessage sql.NullString `json:"run_message"`
 	BeginTime  time.Time      `json:"begin_time"`

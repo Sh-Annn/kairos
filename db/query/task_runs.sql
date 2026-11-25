@@ -6,7 +6,7 @@
 --        $1, $2, $3, $4, $5, $6
 -- ) RETURNING *;
 INSERT INTO task_runs (
-       task_id, run_status, run_message, begin_time, end_time
+       task_id, attempt, run_status, run_message, begin_time, end_time
 ) VALUES (
-       $1, $2, $3, $4, $5
+       $1, $2, $3, $4, $5, $6
 ) RETURNING *;

@@ -100,6 +100,7 @@ func (s *Scheduler) execTask(ctx context.Context, task *db.Task) error {
 			Valid:  true,
 		}
 		taskRunsParams.EndTime = time.Now()
+		taskRunsParams.Attempt = task.RetryCount + 1
 
 		_, _ = s.queries.CreateTaskRun(ctx, taskRunsParams)
 		return s.HandleFailure(ctx, task, execErr)

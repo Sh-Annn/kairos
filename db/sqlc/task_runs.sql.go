@@ -14,14 +14,15 @@ import (
 const createTaskRun = `-- name: CreateTaskRun :one
 
 INSERT INTO task_runs (
-       task_id, run_status, run_message, begin_time, end_time
+       task_id, attempt, run_status, run_message, begin_time, end_time
 ) VALUES (
-       $1, $2, $3, $4, $5
-) RETURNING id, task_id, run_status, run_message, begin_time, end_time
+       $1, $2, $3, $4, $5, $6
+) RETURNING id, task_id, attempt, run_status, run_message, begin_time, end_time
 `
 
 type CreateTaskRunParams struct {
 	TaskID     int64          `json:"task_id"`
+	Attempt    int32          `json:"attempt"`
 	RunStatus  string         `json:"run_status"`
 	RunMessage sql.NullString `json:"run_message"`
 	BeginTime  time.Time      `json:"begin_time"`
@@ -40,6 +41,7 @@ type CreateTaskRunParams struct {
 func (q *Queries) CreateTaskRun(ctx context.Context, arg CreateTaskRunParams) (TaskRun, error) {
 	row := q.db.QueryRowContext(ctx, createTaskRun,
 		arg.TaskID,
+		arg.Attempt,
 		arg.RunStatus,
 		arg.RunMessage,
 		arg.BeginTime,
@@ -49,6 +51,7 @@ func (q *Queries) CreateTaskRun(ctx context.Context, arg CreateTaskRunParams) (T
 	err := row.Scan(
 		&i.ID,
 		&i.TaskID,
+		&i.Attempt,
 		&i.RunStatus,
 		&i.RunMessage,
 		&i.BeginTime,

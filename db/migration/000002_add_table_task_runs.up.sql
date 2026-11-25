@@ -9,6 +9,7 @@
 CREATE TABLE task_runs (
        id bigserial PRIMARY KEY,
        task_id bigint NOT NULL,
+       attempt INT NOT NULL DEFAULT 1,
        -- 暂时不实现
        --run_type TEXT NOT NULL DEFAULT 'begin' CHECK (run_type IN ('begin', 'retry')),
        run_status TEXT NOT NULL CHECK (run_status IN ('success', 'fail')),
