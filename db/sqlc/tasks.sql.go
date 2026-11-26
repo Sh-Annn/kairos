@@ -75,6 +75,7 @@ SELECT id, task_type, handler_config, schedule_type, cron_expr, interval_seconds
 WHERE status = 'active' AND next_run_at <= now()
 ORDER BY next_run_at
 LIMIT $1
+FOR UPDATE
 `
 
 func (q *Queries) ListDueTasks(ctx context.Context, limit int32) ([]Task, error) {

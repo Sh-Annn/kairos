@@ -118,8 +118,8 @@ func CreateNewTask(ctx context.Context, queries db.Querier) {
 	defer Cannel()
 
 	handlerConfig := domain.HandlerConfig{
-		URL:    domain.RandomString(12),
-		Method: domain.RandomMethod(),
+		URL:    "https://httpbin.org/get",
+		Method: "GET",
 	}
 	data, err := json.Marshal(handlerConfig)
 	if err != nil {

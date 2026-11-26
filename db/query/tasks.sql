@@ -23,4 +23,5 @@ RETURNING *;
 SELECT * FROM tasks
 WHERE status = 'active' AND next_run_at <= now()
 ORDER BY next_run_at
-LIMIT $1;
+LIMIT $1
+FOR UPDATE;
