@@ -81,6 +81,7 @@ func (s *Scheduler) Check(ctx context.Context) error {
 func (s *Scheduler) execTask(ctx context.Context, task *db.Task) error {
 	taskRunsParams := db.CreateTaskRunParams{
 		TaskID:    task.ID,
+		Attempt:   task.RetryCount + 1,
 		RunStatus: "success",
 		RunMessage: sql.NullString{
 			Valid: false,
@@ -100,7 +101,6 @@ func (s *Scheduler) execTask(ctx context.Context, task *db.Task) error {
 			Valid:  true,
 		}
 		taskRunsParams.EndTime = time.Now()
-		taskRunsParams.Attempt = task.RetryCount + 1
 
 		_, _ = s.queries.CreateTaskRun(ctx, taskRunsParams)
 		return s.HandleFailure(ctx, task, execErr)
@@ -118,8 +118,8 @@ func CreateNewTask(ctx context.Context, queries db.Querier) {
 	defer Cannel()
 
 	handlerConfig := domain.HandlerConfig{
-		URL:    "https://httpbin.org/get",
-		Method: "GET",
+		URL:    domain.RandomString(12),
+		Method: domain.RandomMethod(),
 	}
 	data, err := json.Marshal(handlerConfig)
 	if err != nil {
