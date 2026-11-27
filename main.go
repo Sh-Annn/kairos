@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"database/sql"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"log"
@@ -15,6 +17,8 @@ import (
 )
 
 func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 	// connect database
 	conn, err := sql.Open("postgres", "host=localhost dbname=kairos connect_timeout=5 sslmode=disable user=root password=secret")
 	if err != nil {
@@ -26,14 +30,16 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer conn.Close()
 	log.Println("connect kairos database")
+	defer conn.Close()
 
 	e := executor.NewHTTPExecutor()
 
 	s := scheduler.NewScheduler(db.New(conn), e, 2*time.Second)
 
-	if err := s.Run(context.Background()); err != nil {
+	if err := s.Run(ctx); err != nil {
 		log.Println(err)
 	}
+
+	log.Println("exited program")
 }

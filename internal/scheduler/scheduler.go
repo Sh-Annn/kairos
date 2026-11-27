@@ -38,6 +38,7 @@ func (s *Scheduler) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
+			log.Println("close from s.Run")
 			return nil
 		case <-ticker.C:
 			err = s.Check(ctx)
