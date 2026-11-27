@@ -61,15 +61,19 @@ func (s *Scheduler) HandleFailure(ctx context.Context, task *db.Task, execErr er
 		Valid: true,
 	}
 
-	switch execErr {
-	case domain.URLError, domain.MethodError, domain.ConfigError:
+	switch execErr.Error() {
+	case domain.URLError.Error(),
+		domain.MethodError.Error(),
+		domain.ConfigError.Error():
 		updateTaskParams.Status = db.NullTaskStatus{
 			TaskStatus: "paused",
 			Valid:      true,
 		}
 
-	case domain.NewRequestError, domain.HTTPClientError, domain.StatusCodeError,
-		domain.BodyError:
+	case domain.NewRequestError.Error(),
+		domain.HTTPClientError.Error(),
+		domain.StatusCodeError.Error(),
+		domain.BodyError.Error():
 		updateTaskParams.NextRunAt = sql.NullTime{
 			Time:  time.Now().Add(time.Duration((task.RetryCount+1)*task.RetryBackoff) * time.Second),
 			Valid: true,
