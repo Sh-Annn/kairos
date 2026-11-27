@@ -20,16 +20,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// test conn
 	err = conn.PingContext(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer conn.Close()
 	log.Println("connect kairos database")
-
-	defer func() {
-		log.Println("close kairos database")
-	}()
 
 	e := executor.NewHTTPExecutor()
 
